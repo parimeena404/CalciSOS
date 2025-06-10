@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>SOS Calculator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Force latest EmailJS SDK v4.4.1, bypass cache -->
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4.4.1/dist/email.min.js?v=4.4.1"></script>
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #0a1931;
+      min-height: 100vh;
+      position: relative;
+      overflow-x: hidden;
+    }
+    .bubbles {
+      position: fixed;
+      width: 100vw;
+      height: 100vh;
+      left: 0;
+      top: 0;
+      z-index: 0;
+      pointer-events: none;
+    }
+    .bubbles span {
+      position: absolute;
+      bottom: -120px;
+      display: block;
+      background: rgba(255,255,255,0.12);
+      border-radius: 50%;
+      animation: move 12s linear infinite;
+      opacity: 0.7;
+    }
+    .bubbles span.one { left: 10%; width: 60px; height: 60px; animation-delay: 2.2s; animation-duration: 14s; }
+    .bubbles span.two { left: 20%; width: 80px; height: 80px; animation-delay: 3.5s; animation-duration: 16s; }
+    .bubbles span.three { left: 35%; width: 40px; height: 40px; animation-delay: 0.2s; animation-duration: 11s; }
+    .bubbles span.four { left: 50%; width: 100px; height: 100px; animation-delay: 6s; animation-duration: 15s; }
+    .bubbles span.five { left: 70%; width: 50px; height: 50px; animation-delay: 7s; animation-duration: 13s; }
+    .bubbles span.six { left: 80%; width: 90px; height: 90px; animation-delay: 4s; animation-duration: 17s; }
+    .bubbles span.seven { left: 90%; width: 30px; height: 30px; animation-delay: 3s; animation-duration: 10s; }
+    @keyframes move {
+      0% { transform: translateY(0) scale(1); }
+      50% { opacity: 0.9; }
+      100% { transform: translateY(-110vh) scale(1.2); opacity: 0.2; }
+    }
+    .container {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      z-index: 1;
+    }
+    .calculator {
+      background: rgba(20, 40, 80, 0.8);
+      border-radius: 20px;
+      padding: 30px 24px 24px 24px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.45), 0 0 30px #2167d1;
+      border: 1px solid rgba(255,255,255,0.09);
+      width: 320px;
+      margin-bottom: 40px;
+      margin-top: 40px;
+      position: relative;
+      z-index: 2;
+    }
+    .display {
+      background: rgba(255,255,255,0.08);
+      padding: 22px 14px;
+      margin-bottom: 18px;
+      border-radius: 10px;
+      text-align: right;
+      font-size: 2em;
+      font-weight: 400;
+      color: #fff;
+      overflow-x: auto;
+      border: 1px solid rgba(255,255,255,0.08);
+      box-shadow: inset 0 2px 10px rgba(0,0,0,0.13);
+      text-shadow: 0 0 20px #1e90ff55;
+    }
+    .buttons {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 13px;
+    }
+    button {
+      padding: 18px 0;
+      border: none;
+      border-radius: 10px;
+      background: linear-gradient(145deg,#1e2746,#0a1931 60%);
+      color: #fff;
+      font-size: 1.2em;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 1px solid rgba(255,255,255,0.07);
+      box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+    }
+    button:hover {
+      background: linear-gradient(145deg,#2167d1,#0a1931 70%);
+      color: #fff;
+      transform: translateY(-2px) scale(1.04);
+      box-shadow: 0 6px 16px #1e90ff44;
+    }
+    button:active {
+      background: #0a1931;
+      transform: scale(0.98);
+    }
+    .equals {
+      background: linear-gradient(90deg,#1e90ff 60%,#2167d1 100%);
+      color: #fff;
+      font-weight: bold;
+      grid-column: span 4;
+      font-size: 1.25em;
+      box-shadow: 0 4px 16px #1e90ff55;
+      margin-top: 10px;
+    }
+    .equals:hover {
+      background: linear-gradient(90deg,#2167d1 60%,#1e90ff 100%);
+      color: #fff;
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      background: rgba(0,0,0,0.75);
+      z-index: 1000;
+      backdrop-filter: blur(8px);
+    }
+    .modal-content {
+      background: rgba(10, 25, 49, 0.98);
+      padding: 32px 24px 24px 24px;
+      width: 100%;
+      max-width: 400px;
+      margin: 80px auto;
+      border-radius: 18px;
+      text-align: center;
+      box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+      border: 1px solid #1e90ff55;
+      color: white;
+      animation: modalAppear 0.32s cubic-bezier(.18,.89,.32,1.28);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    @keyframes modalAppear {
+      from { opacity: 0; transform: translateY(-55px);}
+      to { opacity: 1; transform: translateY(0);}
+    }
+    .modal-content h3 {
+      margin-top: 0;
+      margin-bottom: 18px;
+      font-size: 1.4em;
+      color: #1e90ff;
+      letter-spacing: 1px;
+    }
+    .modal-content input,
+    .modal-content textarea {
+      width: 90%;
+      margin: 10px 0;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      font-size: 1em;
+      background: rgba(255,255,255,0.12);
+      color: white;
+      border: 1px solid #1e90ff33;
+      outline: none;
+      transition: border 0.2s;
+      text-align: left;
+      box-sizing: border-box;
+      display: block;
+    }
+    .modal-content input:focus,
+    .modal-content textarea:focus {
+      border: 1.5px solid #1e90ff88;
+      background: rgba(255,255,255,0.18);
+    }
+    .modal-content input::placeholder,
+    .modal-content textarea::placeholder {
+      color: #b9d2ff;
+    }
+    .form-buttons {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+      justify-content: center;
+      width: 100%;
+      flex-wrap: wrap;
+    }
+    .form-buttons button {
+      flex: 1 1 100px;
+      min-width: 100px;
+      max-width: 150px;
+    }
+    .save-btn {
+      background: #21d199 !important;
+      color: #fff;
+    }
+    .sos-btn {
+      background: #ff4e6a !important;
+      color: #fff;
+    }
+    .close-btn {
+      background: #1e2746 !important;
+      color: #fff;
+    }
+    .footer {
+      width: 100vw;
+      background: linear-gradient(90deg,#0a1931 50%,#1e90ff 100%);
+      color: #fff;
+      text-align: center;
+      padding: 16px 0 12px 0;
+      font-size: 1.1em;
+      letter-spacing: 1px;
+      box-shadow: 0 -2px 10px #1e90ff22;
+      position: fixed;
+      left: 0;
+      bottom: 0;
+      z-index: 10;
+      font-family: inherit;
+    }
+    .footer .heart {
+      color: #ff4e6a;
+      font-size: 1.2em;
+      animation: heartbeat 1.5s ease infinite;
+      display: inline-block;
+    }
+    @keyframes heartbeat {
+      0% { transform: scale(1);}
+      25% { transform: scale(1.15);}
+      50% { transform: scale(1);}
+      75% { transform: scale(1.15);}
+      100% { transform: scale(1);}
+    }
+    @media (max-width: 500px) {
+      .calculator { width: 95vw; padding: 18px 6vw 16px 6vw;}
+      .modal-content { padding: 18px 6vw 16px 6vw;}
+    }
+  </style>
+</head>
+<body>
+  <!-- Bubble background -->
+  <div class="bubbles">
+    <span class="one"></span>
+    <span class="two"></span>
+    <span class="three"></span>
+    <span class="four"></span>
+    <span class="five"></span>
+    <span class="six"></span>
+    <span class="seven"></span>
+  </div>
+
+  <div class="container">
+    <!-- Calculator -->
+    <div class="calculator">
+      <div class="display" id="display">0</div>
+      <div class="buttons">
+        <button>7</button>
+        <button>8</button>
+        <button>9</button>
+        <button>÷</button>
+        <button>4</button>
+        <button>5</button>
+        <button>6</button>
+        <button>×</button>
+        <button>1</button>
+        <button>2</button>
+        <button>3</button>
+        <button>-</button>
+        <button>0</button>
+        <button>.</button>
+        <button id="clear">C</button>
+        <button>+</button>
+        <button id="equals" class="equals">=</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    Made with <span class="heart">❤️</span> by Pari
+  </footer>
+
+  <!-- Emergency Modal -->
+  <div id="emergencyModal" class="modal">
+    <div class="modal-content">
+      <h3>🆘 Emergency Contacts</h3>
+      <input type="email" id="email1" placeholder="Email 1 (required)">
+      <input type="email" id="email2" placeholder="Email 2">
+      <input type="email" id="email3" placeholder="Email 3">
+      <textarea id="message" placeholder="Emergency message"></textarea>
+      <div class="form-buttons">
+        <button onclick="saveContacts()" class="save-btn">Save</button>
+        <button onclick="sendSOS()" class="sos-btn">Send SOS Now</button>
+        <button onclick="closeModal()" class="close-btn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Initialize EmailJS (latest SDK v4)
+    emailjs.init({publicKey: 'vPNFk1BUznRB5PFu_'});
+
+    let display = document.getElementById('display');
+    let currentInput = '';
+    let resetNext = false;
+
+    document.querySelectorAll('.buttons button').forEach(button => {
+      button.addEventListener('click', () => {
+        const value = button.textContent;
+
+        if (value === 'C') {
+          currentInput = '';
+          display.textContent = '0';
+          return;
+        }
+
+        if (value === '=') {
+          // Emergency modal trigger
+          if (currentInput === '911') {
+            showEmergencyModal();
+            currentInput = '';
+            display.textContent = '0';
+            return;
+          }
+          // Replace × and ÷ with * and / for eval
+          const safeInput = currentInput.replace(/×/g, '*').replace(/÷/g, '/');
+          try {
+            const result = eval(safeInput);
+            display.textContent = result;
+            currentInput = result.toString();
+            resetNext = true;
+          } catch {
+            display.textContent = 'Error';
+            currentInput = '';
+          }
+          return;
+        }
+
+        if (resetNext) {
+          currentInput = '';
+          resetNext = false;
+        }
+
+        currentInput += value;
+        display.textContent = currentInput;
+      });
+    });
+
+    // Emergency Modal Functions
+    function showEmergencyModal() {
+      document.getElementById('emergencyModal').style.display = 'block';
+      // Load saved contacts/message if available
+      const savedContacts = JSON.parse(localStorage.getItem('emergencyContacts')) || [];
+      document.getElementById('email1').value = savedContacts[0] || '';
+      document.getElementById('email2').value = savedContacts[1] || '';
+      document.getElementById('email3').value = savedContacts[2] || '';
+      document.getElementById('message').value = localStorage.getItem('emergencyMessage') || '';
+    }
+
+    function closeModal() {
+      document.getElementById('emergencyModal').style.display = 'none';
+    }
+
+    function saveContacts() {
+      const emails = [
+        document.getElementById('email1').value.trim(),
+        document.getElementById('email2').value.trim(),
+        document.getElementById('email3').value.trim()
+      ].filter(email => email !== '');
+
+      const message = document.getElementById('message').value.trim() || 'I need help!';
+
+      if (emails.length === 0) {
+        alert('At least one email is required!');
+        return;
+      }
+
+      localStorage.setItem('emergencyContacts', JSON.stringify(emails));
+      localStorage.setItem('emergencyMessage', message);
+      alert('Settings saved!');
+      closeModal();
+    }
+
+    async function sendSOS() {
+      const emails = JSON.parse(localStorage.getItem('emergencyContacts')) || [];
+      const message = localStorage.getItem('emergencyMessage') || 'I need help!';
+
+      if (emails.length === 0) {
+        alert('No emergency contacts saved!');
+        return;
+      }
+
+      try {
+        // Always get current location
+        const position = await new Promise((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(
+            resolve,
+            reject,
+            {
+              timeout: 10000,
+              enableHighAccuracy: true,
+              maximumAge: 0
+            }
+          );
+        });
+
+        const locationLink = `https://maps.google.com?q=${position.coords.latitude},${position.coords.longitude}`;
+
+        await emailjs.send(
+          'service_l07mw49',
+          'template_c4twy7y',
+          {
+            to_email: emails.join(','),
+            message: message,
+            location: locationLink,
+            timestamp: new Date().toLocaleString()
+          }
+        );
+        alert('SOS sent successfully! Check your email.');
+        closeModal();
+      } catch (error) {
+        console.error('SOS failed:', error);
+        alert('Failed to send SOS: ' + (error.text || error.message || JSON.stringify(error)));
+      }
+    }
+
+    // Close modal when clicking outside content
+    window.onclick = function(event) {
+      const modal = document.getElementById('emergencyModal');
+      if (event.target === modal) {
+        closeModal();
+      }
+    }
+  </script>
+</body>
+</html>
